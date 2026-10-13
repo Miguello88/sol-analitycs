@@ -1,6 +1,6 @@
 # Solana Analytics (MVP)
 
-Aplicación web instalable (PWA) para analizar SOL/USDT en mercado spot y swing trading.
+Aplicación web instalable (PWA) para analizar SOL, JUP, HYPE, ANSEM, LINK, AVAX, ETH y BTC en mercado spot y swing trading.
 
 ## Incluye
 - Precio spot y cambio de 24 horas.
@@ -35,3 +35,10 @@ Si GitHub muestra una opción distinta en el móvil, envía una captura y te gu�
 - Binance Spot API: https://github.com/binance/binance-spot-api-docs
 - Binance market-data-only endpoint: https://data-api.binance.vision
 - Alternative.me Fear & Greed: https://alternative.me/crypto/fear-and-greed-index/
+
+
+## Activos y fuentes
+- SOL, JUP, HYPE, LINK, AVAX y BTC/ETH: datos públicos de Binance Spot.
+- ANSEM (The Black Bull): se intenta consultar el par público ANSEM/USDT de MEXC. Si el proveedor o el navegador bloquean la consulta, ese activo puede no cargar; los demás activos siguen usando Binance.
+- Fear & Greed procede de Alternative.me y representa el sentimiento general del mercado, no el sentimiento exclusivo de cada moneda.
+- Las ondas son una heurística experimental de pivotes y Fibonacci, no un recuento Elliott validado ni una recomendación de compra o venta.

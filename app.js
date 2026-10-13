@@ -1,22 +1,54 @@
 const $ = id => document.getElementById(id);
 let interval = "1d", candles = [], pivots = [], currentPrice = null;
+let selectedAsset = "SOL";
+const assets = {
+  SOL: { name: "Solana", symbol: "SOLUSDT", source: "binance" },
+  JUP: { name: "Jupiter", symbol: "JUPUSDT", source: "binance" },
+  HYPE: { name: "Hyperliquid", symbol: "HYPEUSDT", source: "binance" },
+  LINK: { name: "Chainlink", symbol: "LINKUSDT", source: "binance" },
+  AVAX: { name: "Avalanche", symbol: "AVAXUSDT", source: "binance" },
+  ETH: { name: "Ethereum", symbol: "ETHUSDT", source: "binance" },
+  BTC: { name: "Bitcoin", symbol: "BTCUSDT", source: "binance" },
+  ANSEM: { name: "The Black Bull", symbol: "ANSEMUSDT", source: "mexc" }
+};
 const money = n => Number.isFinite(n) ? n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:n<1?5:2}) : "—";
 const shortDate = t => new Date(t).toLocaleDateString("es-ES",{day:"2-digit",month:"short"});
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2800)}
 async function getJson(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}
 async function loadPrice(){
-  const [ticker,raw]=await Promise.all([
-    getJson("https://data-api.binance.vision/api/v3/ticker/24hr?symbol=SOLUSDT"),
-    getJson(`https://data-api.binance.vision/api/v3/klines?symbol=SOLUSDT&interval=${interval}&limit=180`)
-  ]);
-  currentPrice=Number(ticker.lastPrice);
+  const asset = assets[selectedAsset];
+  let ticker, raw, sourceLabel;
+  if(asset.source === "binance"){
+    const base = "https://data-api.binance.vision/api/v3";
+    [ticker,raw] = await Promise.all([
+      getJson(`${base}/ticker/24hr?symbol=${asset.symbol}`),
+      getJson(`${base}/klines?symbol=${asset.symbol}&interval=${interval}&limit=180`)
+    ]);
+    currentPrice = Number(ticker.lastPrice);
+    sourceLabel = "Binance Spot";
+    candles = raw.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+    const ch = Number(ticker.priceChangePercent);
+    $("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"% · 24 h";
+    $("change").style.color=ch>=0?"var(--green)":"var(--red)";
+    $("change").style.background=ch>=0?"#253a35":"#3b222c";
+  } else {
+    // ANSEM no es un par de Binance Spot; se consulta la API pública de MEXC.
+    const base = "https://api.mexc.com/api/v3";
+    [ticker,raw] = await Promise.all([
+      getJson(`${base}/ticker/24hr?symbol=${asset.symbol}`),
+      getJson(`${base}/klines?symbol=${asset.symbol}&interval=${interval}&limit=180`)
+    ]);
+    currentPrice = Number(ticker.lastPrice);
+    sourceLabel = "MEXC Spot";
+    candles = raw.map(k=>({t:Number(k[0]),o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+    const ch = Number(ticker.priceChangePercent);
+    $("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"% · 24 h";
+    $("change").style.color=ch>=0?"var(--green)":"var(--red)";
+    $("change").style.background=ch>=0?"#253a35":"#3b222c";
+  }
+  $("pairLabel").textContent=`${selectedAsset} / USDT · MERCADO SPOT`;
   $("price").textContent=money(currentPrice);
-  const ch=Number(ticker.priceChangePercent);
-  $("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"% · 24 h";
-  $("change").style.color=ch>=0?"var(--green)":"var(--red)";
-  $("change").style.background=ch>=0?"#253a35":"#3b222c";
-  candles=raw.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
-  $("updated").textContent="Actualizado: "+new Date().toLocaleString("es-ES")+" · Binance Spot";
+  $("updated").textContent="Actualizado: "+new Date().toLocaleString("es-ES")+" · "+sourceLabel;
   $("chartRange").textContent=`${candles.length} velas · ${interval==="1d"?"diario":"semanal"}`;
   calcIndicators(); detectPivots(); drawChart(); renderWaves();
 }
@@ -108,8 +140,17 @@ function calculatePosition(){
  const capital=Number($("capital").value),risk=Number($("risk").value)/100,entry=Number($("calcEntry").value),stop=Number($("calcStop").value);
  if(!(capital>0&&risk>0&&entry>0&&stop>0&&stop<entry)){ $("calcResult").textContent="Comprueba los valores: en spot, el stop debe estar por debajo de la entrada y todos los importes deben ser positivos.";return}
  const riskUsd=capital*risk,qty=riskUsd/(entry-stop),cost=qty*entry;
- $("calcResult").innerHTML=`Riesgo teórico: <strong>${money(riskUsd)}</strong> · Cantidad aproximada: <strong>${qty.toFixed(5)} SOL</strong> · Capital necesario: <strong>${money(cost)}</strong>. ${cost>capital?"Aviso: supera el capital introducido; reduce el tamaño.":""} No incluye comisiones, deslizamiento ni gaps.`;
+ $("calcResult").innerHTML=`Riesgo teórico: <strong>${money(riskUsd)}</strong> · Cantidad aproximada: <strong>${qty.toFixed(5)} ${selectedAsset}</strong> · Capital necesario: <strong>${money(cost)}</strong>. ${cost>capital?"Aviso: supera el capital introducido; reduce el tamaño.":""} No incluye comisiones, deslizamiento ni gaps.`;
 }
+$("assetSelect").addEventListener("change", async e=>{
+  selectedAsset = e.target.value;
+  try { await loadPrice(); toast(`${selectedAsset} cargado`); }
+  catch(err) {
+    $("price").textContent="Sin conexión";
+    $("updated").textContent=`No se pudieron cargar datos de ${selectedAsset}. Puede que el proveedor no esté disponible desde el navegador.`;
+    toast("Error al cargar "+selectedAsset+": "+err.message);
+  }
+});
 $("refreshBtn").addEventListener("click",async()=>{try{await loadPrice();await loadFearGreed();toast("Datos actualizados")}catch(e){toast("No se pudieron cargar los datos: "+e.message)}});
 document.querySelectorAll("[data-interval]").forEach(b=>b.addEventListener("click",async()=>{interval=b.dataset.interval;document.querySelectorAll("[data-interval]").forEach(x=>x.classList.toggle("active",x===b));try{await loadPrice()}catch(e){toast("No se pudo cambiar el intervalo")}}));
 $("calcBtn").addEventListener("click",calculatePosition);

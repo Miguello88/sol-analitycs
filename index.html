@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#11121b">
-  <meta name="description" content="Panel de análisis de Solana para swing trading spot: precio, sentimiento y escenarios técnicos.">
+  <meta name="description" content="Panel de análisis cripto para swing trading spot: precio, sentimiento y escenarios técnicos.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
@@ -18,7 +18,20 @@
   <main>
     <section class="hero panel">
       <div>
-        <p class="eyebrow">SOL / USDT · MERCADO SPOT</p>
+        <div class="asset-picker">
+          <label for="assetSelect">Criptoactivo</label>
+          <select id="assetSelect" aria-label="Seleccionar criptoactivo">
+            <option value="SOL">SOL · Solana</option>
+            <option value="JUP">JUP · Jupiter</option>
+            <option value="HYPE">HYPE · Hyperliquid</option>
+            <option value="ANSEM">ANSEM · The Black Bull</option>
+            <option value="LINK">LINK · Chainlink</option>
+            <option value="AVAX">AVAX · Avalanche</option>
+            <option value="ETH">ETH · Ethereum</option>
+            <option value="BTC">BTC · Bitcoin</option>
+          </select>
+        </div>
+        <p id="pairLabel" class="eyebrow">SOL / USDT · MERCADO SPOT</p>
         <div class="price-line"><h1 id="price">Cargando…</h1><span id="change" class="pill">—</span></div>
         <p id="updated" class="muted">Conectando con fuentes públicas…</p>
       </div>
@@ -51,7 +64,7 @@
         </div>
       </div>
       <div class="chart-legend"><span><i class="legend-line"></i> Precio de cierre</span><span><i class="legend-pivot"></i> Pivotes detectados</span></div>
-      <canvas id="priceChart" height="260" aria-label="Gráfico de precio de SOL"></canvas>
+      <canvas id="priceChart" height="260" aria-label="Gráfico de precio del criptoactivo seleccionado"></canvas>
       <div class="between"><span id="chartRange" class="muted">Últimas velas</span><span class="muted">Fuente: Binance Spot API</span></div>
     </section>
 
