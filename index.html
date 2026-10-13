@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#11121b">
+  <meta name="description" content="Panel de análisis de Solana para swing trading spot: precio, sentimiento y escenarios técnicos.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Solana Analytics</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="sol-mark">≋</div><div><strong>Solana Analytics</strong><small>SWING TRADING · SPOT</small></div></div>
+    <button id="refreshBtn" class="secondary">↻ Actualizar</button>
+  </header>
+  <main>
+    <section class="hero panel">
+      <div>
+        <p class="eyebrow">SOL / USDT · MERCADO SPOT</p>
+        <div class="price-line"><h1 id="price">Cargando…</h1><span id="change" class="pill">—</span></div>
+        <p id="updated" class="muted">Conectando con fuentes públicas…</p>
+      </div>
+      <div class="hero-badge"><span class="pulse"></span> DATOS PÚBLICOS</div>
+    </section>
+
+    <section class="metrics">
+      <article class="panel metric">
+        <div class="metric-head"><span>Fear & Greed</span><span class="dot purple"></span></div>
+        <div class="metric-value" id="fngValue">—<small>/100</small></div>
+        <div class="meter"><div id="fngBar"></div></div>
+        <div class="between"><span id="fngLabel">Cargando índice</span><span id="fngDate">—</span></div>
+        <p class="source">Fuente: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">Alternative.me</a> · sentimiento general cripto</p>
+      </article>
+      <article class="panel metric">
+        <div class="metric-head"><span>Contexto de tendencia</span><span class="dot green"></span></div>
+        <div class="metric-value compact" id="trend">Analizando…</div>
+        <p id="trendNote" class="muted">Se compara el precio diario con medias móviles.</p>
+        <div class="between"><span>Media 20 días</span><strong id="ma20">—</strong></div>
+        <div class="between"><span>Media 50 días</span><strong id="ma50">—</strong></div>
+      </article>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">ESTRUCTURA DE MERCADO</p><h2>Precio y pivotes</h2></div>
+        <div class="tabs" role="group" aria-label="Intervalo">
+          <button data-interval="1d" class="tab active">1D</button>
+          <button data-interval="1w" class="tab">1S</button>
+        </div>
+      </div>
+      <div class="chart-legend"><span><i class="legend-line"></i> Precio de cierre</span><span><i class="legend-pivot"></i> Pivotes detectados</span></div>
+      <canvas id="priceChart" height="260" aria-label="Gráfico de precio de SOL"></canvas>
+      <div class="between"><span id="chartRange" class="muted">Últimas velas</span><span class="muted">Fuente: Binance Spot API</span></div>
+    </section>
+
+    <section class="panel wave-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">MÓDULO EXPERIMENTAL</p><h2>Ondas de Elliott</h2></div>
+        <span id="waveStatus" class="status">Esperando datos</span>
+      </div>
+      <p class="muted">El sistema detecta máximos y mínimos locales para proponer un recuento orientativo. No sustituye el análisis manual.</p>
+      <div id="waveSummary" class="wave-summary">Analizando estructura…</div>
+      <div class="entry-grid">
+        <div class="entry-card"><span>Zona potencial de entrada</span><strong id="entryZone">—</strong><small>Retroceso Fibonacci 38,2–61,8%</small></div>
+        <div class="entry-card"><span>Invalidación técnica</span><strong id="invalidation">—</strong><small>Por debajo del pivote de referencia</small></div>
+        <div class="entry-card"><span>Objetivo orientativo</span><strong id="target">—</strong><small>Proyección 1,0× del tramo previo</small></div>
+      </div>
+      <div id="entrySignal" class="signal neutral"><span class="signal-icon">◎</span><div><strong>Sin señal confirmada</strong><p>Se necesitan datos suficientes y confirmación del precio antes de plantear una entrada.</p></div></div>
+      <p class="disclaimer">Las ondas de Elliott son interpretativas. Los niveles se calculan automáticamente a partir de pivotes históricos y pueden ser incorrectos. No son recomendaciones ni garantías de rentabilidad.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading"><div><p class="eyebrow">PLANIFICADOR</p><h2>Calculadora de operación</h2></div></div>
+      <div class="form-grid">
+        <label>Capital destinado (USDT)<input id="capital" type="number" min="1" step="1" value="500"></label>
+        <label>Riesgo máximo (%)<input id="risk" type="number" min="0.1" max="5" step="0.1" value="1"></label>
+        <label>Entrada (USDT)<input id="calcEntry" type="number" min="0" step="0.01" placeholder="Precio de entrada"></label>
+        <label>Stop (USDT)<input id="calcStop" type="number" min="0" step="0.01" placeholder="Precio de invalidación"></label>
+      </div>
+      <button id="calcBtn" class="primary">Calcular tamaño de posición</button>
+      <div id="calcResult" class="calc-result muted">Introduce una entrada y un stop para calcular el tamaño teórico de la posición.</div>
+    </section>
+
+    <footer><p>Solana Analytics · Proyecto personal educativo · <a href="https://github.com/binance/binance-spot-api-docs" target="_blank" rel="noopener">API pública de Binance</a></p><p>Spot únicamente: no conecta con tu exchange ni ejecuta órdenes.</p></footer>
+  </main>
+  <div id="toast" role="status" class="toast"></div>
+  <script src="./app.js"></script>
+</body>
+</html>

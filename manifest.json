@@ -1,0 +1,13 @@
+{
+  "name": "Solana Analytics",
+  "short_name": "SOL Analytics",
+  "description": "Análisis de Solana para swing trading spot",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0e15",
+  "theme_color": "#11121b",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
