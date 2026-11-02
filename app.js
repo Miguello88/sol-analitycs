@@ -35,7 +35,98 @@ function calcIndicators(){const cls=candles.map(c=>c.c),ma20=sma(cls,20),ma50=sm
  $('ma20').textContent=money(ma20);$('ma50').textContent=money(ma50);let trend='Tendencia mixta',note='Medias y precio sin alineación clara';if(ma20&&ma50&&currentPrice>ma20&&ma20>ma50){trend='Alcista';note='Precio sobre MA20 y MA20 sobre MA50'}else if(ma20&&ma50&&currentPrice<ma20&&ma20<ma50){trend='Bajista';note='Precio bajo MA20 y MA20 bajo MA50'}else if(ma20&&currentPrice>ma20){trend='Recuperación';note='Precio sobre MA20; falta confirmación de tendencia larga'}else if(ma20){trend='Debilidad';note='Precio bajo MA20'}$('trend').textContent=trend;$('trendNote').textContent=note;
  $('rsi').textContent=rv===null?'—':rv.toFixed(1);$('rsiNote').textContent=rv===null?'Datos insuficientes':rv>=70?'Sobrecompra orientativa':rv<=30?'Sobreventa orientativa':'Zona intermedia';$('macd').textContent=m?fmt(m.line):'—';$('macdNote').textContent=m?`Señal ${fmt(m.signal)} · hist. ${fmt(m.hist)}`:'Datos insuficientes';$('atr').textContent=av?money(av):'—';$('atrPct').textContent=av?`${(av/currentPrice*100).toFixed(2)}% del precio`:'Datos insuficientes';$('relVol').textContent=rel?`${rel.toFixed(2)}×`:'—';$('vwap').textContent=money(vw)}
 function drawChart(){const cv=$('priceChart'),ctx=cv.getContext('2d'),ratio=window.devicePixelRatio||1,w=cv.clientWidth||600,h=300;cv.width=w*ratio;cv.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);if(candles.length<2)return;const pad={l:8,r:65,t:12,b:25},lo=Math.min(...candles.map(c=>c.l)),hi=Math.max(...candles.map(c=>c.h)),range=hi-lo||1,min=lo-range*.06,max=hi+range*.06,x=i=>pad.l+i/(candles.length-1)*(w-pad.l-pad.r),y=v=>pad.t+(max-v)/(max-min)*(h-pad.t-pad.b);ctx.font='10px system-ui';ctx.strokeStyle='#292d40';ctx.fillStyle='#9298af';for(let j=0;j<5;j++){const yy=pad.t+j*(h-pad.t-pad.b)/4;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();ctx.fillText(money(max-j*(max-min)/4),w-pad.r+4,yy+3)}const cw=Math.max(2,Math.min(8,(w-pad.l-pad.r)/candles.length*.65));candles.forEach((c,i)=>{const xx=x(i),up=c.c>=c.o;ctx.strokeStyle=up?'#4adea5':'#fb7185';ctx.fillStyle=up?'#4adea5':'#fb7185';ctx.beginPath();ctx.moveTo(xx,y(c.h));ctx.lineTo(xx,y(c.l));ctx.stroke();const top=y(Math.max(c.o,c.c)),bh=Math.max(1,Math.abs(y(c.o)-y(c.c)));ctx.fillRect(xx-cw/2,top,cw,bh)});pivots.forEach(p=>{ctx.beginPath();ctx.arc(x(p.i),y(p.price),3,0,Math.PI*2);ctx.fillStyle=p.type==='H'?'#fb7185':'#4adea5';ctx.fill()});ctx.fillStyle='#9298af';ctx.fillText(shortDate(candles[0].t),pad.l,h-5);ctx.fillText(shortDate(candles.at(-1).t),Math.max(pad.l,w-pad.r-35),h-5)}
-function renderSignal(){const rv=rsi(),m=macd(),av=atr(),ma20=sma(candles.map(c=>c.c),20),ma50=sma(candles.map(c=>c.c),50);if(rv===null||!m||!av||!ma20||!ma50)return;let score=0;const reasons=[];if(currentPrice>ma20&&ma20>ma50){score+=2;reasons.push('tendencia alcista')}else if(currentPrice<ma20&&ma20<ma50){score-=2;reasons.push('tendencia bajista')}if(m.hist>0){score++;reasons.push('MACD positivo')}else{score--;reasons.push('MACD negativo')}if(rv>50&&rv<70){score++;reasons.push('RSI con momentum')}else if(rv<50&&rv>30){score--;reasons.push('RSI débil')}else if(rv>=70)reasons.push('RSI elevado: cuidado con perseguir precio');else if(rv<=30)reasons.push('RSI bajo: posible rebote, no confirmado');let title='Esperar confirmación',desc='Confluencia insuficiente; evita forzar una entrada.',badge='NEUTRAL';if(score>=3){title='Sesgo alcista';desc='Confluencias positivas: '+reasons.join(', ')+'. Busca retroceso y confirmación en 5 min.';badge='ALCISTA'}else if(score<=-3){title='Sesgo bajista';desc='Confluencias negativas: '+reasons.join(', ')+'. En spot, evita interpretar esto como señal para abrir cortos.';badge='BAJISTA'}else{desc='Lectura mixta: '+reasons.join(', ')+'. Espera una estructura más clara.'}const stop=currentPrice-av*1.5,target=currentPrice+av*3;$('signalBadge').textContent=badge;$('signalTitle').textContent=title;$('signalText').textContent=desc;$('signalBox').className='signal '+(score>=3?'good':score<=-3?'bad':'neutral');$('entryZone').textContent=score>=3?`${money(currentPrice-av*.5)} – ${money(currentPrice)}`:'Esperar confirmación';$('invalidation').textContent=money(stop);$('target').textContent=money(target)}
+
+function renderSignal(){
+  const rv=rsi(),
+        m=macd(),
+        av=atr(),
+        ma20=sma(candles.map(c=>c.c),20),
+        ma50=sma(candles.map(c=>c.c),50);
+
+  if(
+    rv===null || !m ||
+    !Number.isFinite(av) || av<=0 ||
+    !Number.isFinite(ma20) ||
+    !Number.isFinite(ma50) ||
+    !Number.isFinite(currentPrice) ||
+    currentPrice<=0
+  ) return;
+
+  let score=0;
+  const reasons=[];
+
+  // Tendencia
+  if(currentPrice>ma20 && ma20>ma50){
+    score+=2;
+    reasons.push('Tendencia alcista');
+  }else if(currentPrice<ma20 && ma20<ma50){
+    score-=2;
+    reasons.push('Tendencia bajista');
+  }else{
+    reasons.push('Tendencia lateral o mixta');
+  }
+
+  // MACD
+  if(m.hist>0){
+    score++;
+    reasons.push('MACD positivo');
+  }else if(m.hist<0){
+    score--;
+    reasons.push('MACD negativo');
+  }
+
+  // RSI
+  if(rv>=52 && rv<68){
+    score++;
+    reasons.push('RSI favorable');
+  }else if(rv<45 && rv>30){
+    score--;
+    reasons.push('RSI débil');
+  }else if(rv>=68){
+    reasons.push('RSI elevado: evitar perseguir precio');
+  }else if(rv<=30){
+    reasons.push('RSI sobrevendido: esperar confirmación');
+  }
+
+  // Señal final
+  let title='Esperar confirmación';
+  let desc='No hay suficientes condiciones para entrar.';
+  let badge='NEUTRAL';
+  let buy=score>=3 && rv<68 && currentPrice>ma20;
+
+  if(buy){
+    title='Posible entrada de compra';
+    desc='Confluencia alcista: '+reasons.join(', ')+
+      '. Esperar confirmación antes de entrar.';
+    badge='COMPRA';
+  }else if(score<=-3){
+    title='Tendencia bajista';
+    desc='Presión vendedora: '+reasons.join(', ')+
+      '. Evitar nuevas compras mientras no cambie la tendencia.';
+    badge='BAJISTA';
+  }else{
+    desc='Señales mixtas: '+reasons.join(', ')+
+      '. Esperar una oportunidad más clara.';
+  }
+
+  // Gestión de riesgo: solo para posibles compras
+  const stop=currentPrice-av*1.5;
+  const target=currentPrice+av*3;
+
+  $('signalBadge').textContent=badge;
+  $('signalTitle').textContent=title;
+  $('signalText').textContent=desc;
+
+  $('signalBox').className='signal '+
+    (buy?'good':score<=-3?'bad':'neutral');
+
+  $('entryZone').textContent=buy
+    ?`${money(currentPrice-av*.5)} – ${money(currentPrice)}`
+    :'Esperar confirmación';
+
+  $('invalidation').textContent=buy?money(stop):'—';
+  $('target').textContent=buy?money(target):'—';
+}
 function drawLiquidationMap(){const av=atr(14)||currentPrice*.02;const supports=pivots.filter(p=>p.type==='L'&&p.price<currentPrice).slice(-4).map(p=>p.price);const resistances=pivots.filter(p=>p.type==='H'&&p.price>currentPrice).slice(-4).map(p=>p.price);const down=supports.length?supports: [currentPrice-av,currentPrice-av*1.7,currentPrice-av*2.5];const up=resistances.length?resistances:[currentPrice+av,currentPrice+av*1.7,currentPrice+av*2.5];$('liqDown').textContent=money(Math.max(...down));$('liqCurrent').textContent=money(currentPrice);$('liqUp').textContent=money(Math.min(...up));$('liqStatus').textContent='Zonas estimadas';const cv=$('liqChart'),ctx=cv.getContext('2d'),ratio=window.devicePixelRatio||1,w=cv.clientWidth||600,h=220;cv.width=w*ratio;cv.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);const vals=[...down,currentPrice,...up],min=Math.min(...vals)-av*.5,max=Math.max(...vals)+av*.5,y=v=>h-22-(v-min)/(max-min||1)*(h-44);ctx.font='11px system-ui';ctx.fillStyle='#9298af';ctx.fillText('Zonas potenciales — estimación técnica, no datos de posiciones',8,14);down.forEach((v,i)=>{ctx.fillStyle='#fb718566';ctx.fillRect(8,y(v)-7,w-16,14);ctx.fillStyle='#fda4af';ctx.fillText('Liquidez inferior · '+money(v),12,y(v)-9)});up.forEach(v=>{ctx.fillStyle='#4adea566';ctx.fillRect(8,y(v)-7,w-16,14);ctx.fillStyle='#86efac';ctx.fillText('Liquidez superior · '+money(v),12,y(v)-9)});ctx.strokeStyle='#a78bfa';ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(8,y(currentPrice));ctx.lineTo(w-8,y(currentPrice));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#d8b4fe';ctx.fillText('Precio spot '+money(currentPrice),12,y(currentPrice)-9)}
 function connectLiquidations(){if(liqSocket){try{liqSocket.close()}catch(e){}}liqEvents=[];$('liqFeed').innerHTML='<li>Esperando eventos del mercado de futuros…</li>';const symbol=assets[selectedAsset].symbol.toLowerCase();if(assets[selectedAsset].source!=='binance'){$('liqStatus').textContent='Flujo no disponible';$('liqFeedNote').textContent='El proveedor de este activo no está conectado al flujo de liquidaciones de Binance Futures.';return}try{liqSocket=new WebSocket(`wss://fstream.binance.com/ws/${symbol}@forceOrder`);liqSocket.onopen=()=>{$('liqFeedNote').textContent=`Conectado al flujo público de Binance Futures para ${selectedAsset}.`;};liqSocket.onmessage=e=>{try{const d=JSON.parse(e.data).o;const item={side:d.S==='SELL'?'Long liquidado':'Short liquidado',price:+d.ap||+d.p,qty:+d.q,time:Date.now()};liqEvents.unshift(item);liqEvents=liqEvents.slice(0,8);$('liqFeed').innerHTML=liqEvents.map(x=>`<li><strong>${x.side}</strong> · ${money(x.price)} · cantidad ${fmt(x.qty)} <small>${new Date(x.time).toLocaleTimeString('es-ES')}</small></li>`).join('');$('liqStatus').textContent='Flujo conectado'}catch(err){}};liqSocket.onerror=()=>{$('liqFeedNote').textContent='El WebSocket no está disponible ahora. El mapa estimado sigue funcionando.';$('liqStatus').textContent='Flujo no disponible'};liqSocket.onclose=()=>{if(!$('liqFeed').children.length)$('liqFeed').innerHTML='<li>Sin eventos recibidos.</li>'}}catch(e){$('liqFeedNote').textContent='No se pudo abrir el flujo en este navegador.'}}
 function calculatePosition(){const capital=+$('capital').value,risk=+$('risk').value/100,entry=+$('calcEntry').value,stop=+$('calcStop').value;if(!(capital>0&&risk>0&&entry>0&&stop>0&&stop<entry)){$('calcResult').textContent='Comprueba los valores: en spot, el stop debe ser positivo y estar por debajo de la entrada.';return}const riskUsd=capital*risk,qty=riskUsd/(entry-stop),cost=qty*entry;$('calcResult').innerHTML=`Riesgo teórico: <strong>${money(riskUsd)}</strong> · Cantidad: <strong>${qty.toFixed(6)} ${selectedAsset}</strong> · Capital necesario: <strong>${money(cost)}</strong>. ${cost>capital?'Aviso: la posición supera el capital disponible. ':''}No incluye comisiones ni deslizamiento.`}
